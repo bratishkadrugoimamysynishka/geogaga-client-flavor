@@ -10,8 +10,7 @@ import router_pb2
 def log_to_review(message):
     os.makedirs("tools", exist_ok=True)
     with open("tools/review.log", "a", encoding="utf-8") as f:
-        f.write(message + "
-")
+        f.write(message + "\n")
 
 def get_item_key(item, attr_name):
     if attr_name == "domain":
