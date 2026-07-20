@@ -1,8 +1,7 @@
 [ДУБЛИКАТ ОБНАРУЖЕН]
   Кастомный источник : https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/main/custom-additions/geosite-block.lst
-  Направление        : [RAW_LST] ➔ [GEOGAGA-BLOCK]
   Элемент            : [domain] ad.mail.ru
   Апстрим-источники  :
-    • https://github.com/hydraponique/roscomvpn-geosite/raw/release/geosite.dat
-    • https://github.com/runetfreedom/russia-v2ray-rules-dat/raw/release/geosite.dat
+    • https://github.com/hydraponique/roscomvpn-geosite/raw/release/geosite.dat [Категории: CATEGORY-ADS]
+    • https://github.com/runetfreedom/russia-v2ray-rules-dat/raw/release/geosite.dat [Категории: CATEGORY-ADS]
 ----------------------------------------------------------------------
