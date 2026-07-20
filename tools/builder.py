@@ -414,7 +414,7 @@ def process_dat(config, list_class, attr_name):
                             k = get_item_key(item, attr_name)
                             if k in upstream_keys_map:
                                 upstream_sources = ", ".join(set(upstream_keys_map[k]))
-                                log_to_review(f"[DUPLICATE] Элемент '{get_item_display_str(item, attr_name)}' из кастомного источника '{url}' уже присутствует в апстрим-источниках: [{upstream_sources}].")
+                                log_to_review(f"[ДУБЛИКАТ] Элемент '{get_item_display_str(item, attr_name)}' из кастомного источника '{url}' уже присутствует в апстрим-источниках: [{upstream_sources}].")
                 elif attr_name == "domain":
                     fetched_domains = parse_json_source_geosite(parsed_data, src_cats)
                     category_items[dst_cat].extend(fetched_domains)
@@ -424,7 +424,7 @@ def process_dat(config, list_class, attr_name):
                             k = get_item_key(item, attr_name)
                             if k in upstream_keys_map:
                                 upstream_sources = ", ".join(set(upstream_keys_map[k]))
-                                log_to_review(f"[DUPLICATE] Элемент '{get_item_display_str(item, attr_name)}' из кастомного источника '{url}' уже присутствует в апстрим-источниках: [{upstream_sources}].")
+                                log_to_review(f"[ДУБЛИКАТ] Элемент '{get_item_display_str(item, attr_name)}' из кастомного источника '{url}' уже присутствует в апстрим-источниках: [{upstream_sources}].")
         
         elif url_lower.endswith('.lst') or url_lower.endswith('.txt'):
             for rule in source['rules']:
@@ -439,7 +439,7 @@ def process_dat(config, list_class, attr_name):
                             k = get_item_key(item, attr_name)
                             if k in upstream_keys_map:
                                 upstream_sources = ", ".join(set(upstream_keys_map[k]))
-                                log_to_review(f"[DUPLICATE] Элемент '{get_item_display_str(item, attr_name)}' из кастомного источника '{url}' уже присутствует в апстрим-источниках: [{upstream_sources}].")
+                                log_to_review(f"[ДУБЛИКАТ] Элемент '{get_item_display_str(item, attr_name)}' из кастомного источника '{url}' уже присутствует в апстрим-источниках: [{upstream_sources}].")
                 elif attr_name == "domain":
                     fetched_domains = parse_lst_source_geosite(parsed_data)
                     category_items[dst_cat].extend(fetched_domains)
@@ -449,7 +449,7 @@ def process_dat(config, list_class, attr_name):
                             k = get_item_key(item, attr_name)
                             if k in upstream_keys_map:
                                 upstream_sources = ", ".join(set(upstream_keys_map[k]))
-                                log_to_review(f"[DUPLICATE] Элемент '{get_item_display_str(item, attr_name)}' из кастомного источника '{url}' уже присутствует в апстрим-источниках: [{upstream_sources}].")
+                                log_to_review(f"[ДУБЛИКАТ] Элемент '{get_item_display_str(item, attr_name)}' из кастомного источника '{url}' уже присутствует в апстрим-источниках: [{upstream_sources}].")
                     
         else:
             for rule in source['rules']:
@@ -467,7 +467,7 @@ def process_dat(config, list_class, attr_name):
                                 k = get_item_key(item, attr_name)
                                 if k in upstream_keys_map:
                                     upstream_sources = ", ".join(set(upstream_keys_map[k]))
-                                    log_to_review(f"[DUPLICATE] Элемент '{get_item_display_str(item, attr_name)}' из кастомного источника '{url}' уже присутствует в апстрим-источниках: [{upstream_sources}].")
+                                    log_to_review(f"[ДУБЛИКАТ] Элемент '{get_item_display_str(item, attr_name)}' из кастомного источника '{url}' уже присутствует в апстрим-источниках: [{upstream_sources}].")
                     
     out_list = list_class()
     for cat, items in category_items.items():
