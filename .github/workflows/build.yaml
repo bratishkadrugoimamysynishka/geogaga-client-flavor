@@ -66,19 +66,26 @@ jobs:
             echo "Ссылка routing/${name}.link успешно сгенерирована"
           done
 
+      - name: Фиксация ошибки воркфлоу в лог
+        if: failure()
+        run: |
+          [ -f tools/review.log ] && mv tools/review.log review.log || true
+          echo "[$(date -u +'%Y-%m-%d %H:%M:%S')] ОШИБКА: Сбой выполнения шагов сборки в GitHub Actions" >> review.log
+
       - name: Коммит и пуш лога в ветку main
+        if: always()
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
           [ -f tools/review.log ] && mv tools/review.log review.log || true
           
-          git add review.log
-          git commit -m "chore: обновление build review.log [skip ci]" || echo "Нет изменений в логе для коммита"
-          
-          git pull --rebase -X theirs origin main
-          git push origin HEAD:main
-        continue-on-error: true
+          if [ -f review.log ]; then
+            git add review.log
+            git commit -m "chore: обновление build review.log [skip ci]" || echo "Нет изменений в логе для коммита"
+            git pull --rebase -X theirs origin main
+            git push origin HEAD:main
+          fi
 
       - name: Коммит в ветку release
         run: |
