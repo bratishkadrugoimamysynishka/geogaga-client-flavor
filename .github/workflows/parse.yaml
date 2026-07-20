@@ -1,8 +1,10 @@
 name: 2. Парсинг в lst
 
 on:
-  schedule:
-    - cron: '5 0,6,12,18 * * *'
+  workflow_run:
+    workflows: ["Сборка geodata и маршрутизации"]
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -11,6 +13,7 @@ permissions:
 jobs:
   parse-data:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Клонирование репозитория
         uses: actions/checkout@v4
