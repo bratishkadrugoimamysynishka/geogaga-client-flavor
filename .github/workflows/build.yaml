@@ -1,4 +1,4 @@
-name: Сборка geodata и маршрутизации
+name: 1. Сборка geodata и маршрутизации
 
 on:
   schedule:
