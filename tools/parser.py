@@ -98,9 +98,7 @@ def process_single_source(folder_name, url):
         
         lst_path = os.path.join(target_folder, f"{safe_cat_name}.lst")
         with open(lst_path, "w", encoding="utf-8") as f:
-            f.write("
-".join(lst_lines) + "
-")
+            f.write("\n".join(lst_lines) + "\n")
 
     summary_path = os.path.join(target_folder, "_summary.txt")
     with open(summary_path, "w", encoding="utf-8") as f:
