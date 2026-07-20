@@ -2,7 +2,7 @@ name: 2. Парсинг в lst
 
 on:
   workflow_run:
-    workflows: ["Сборка geodata и маршрутизации"]
+    workflows: ["1. Сборка geodata и маршрутизации"]
     types:
       - completed
   workflow_dispatch:
