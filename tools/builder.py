@@ -28,19 +28,26 @@ def get_item_display_str(item, attr_name):
         except Exception:
             return f"неизвестно/{item.prefix}"
 
-def check_and_log_duplicates(items, url, src_cat, dst_cat, attr_name, upstream_map):
+def check_and_log_duplicates(items, url, attr_name, upstream_map):
     for item in items:
         k = get_item_key(item, attr_name)
         if k in upstream_map:
-            upstream_sources = sorted(list(set(upstream_map[k])))
-            upstream_str = "\n    • ".join(upstream_sources)
+            url_to_cats = collections.defaultdict(set)
+            for up_url, up_cat in upstream_map[k]:
+                url_to_cats[up_url].add(up_cat)
+            
+            upstream_lines = []
+            for up_url in sorted(url_to_cats.keys()):
+                cats_str = ", ".join(sorted(list(url_to_cats[up_url])))
+                upstream_lines.append(f"    • {up_url} [Категории: {cats_str}]")
+            
+            upstream_str = "\n".join(upstream_lines)
             
             msg = (
                 f"[ДУБЛИКАТ ОБНАРУЖЕН]\n"
                 f"  Кастомный источник : {url}\n"
-                f"  Направление        : [{src_cat}] ➔ [{dst_cat}]\n"
                 f"  Элемент            : {get_item_display_str(item, attr_name)}\n"
-                f"  Апстрим-источники  :\n    • {upstream_str}\n"
+                f"  Апстрим-источники  :\n{upstream_str}\n"
                 f"{'-'*70}"
             )
             log_to_review(msg)
@@ -170,22 +177,32 @@ def fetch_asn_prefixes(all_asns):
     return all_cidrs
 
 def parse_json_source_geoip(data, allowed_cats_set):
-    all_asns = set()
-    all_cidrs = set()
-
+    provider_cidrs = []
+    asn_to_providers = collections.defaultdict(set)
+    
     for provider, info in data.items():
-        if provider.upper() in allowed_cats_set:
-            cidrs = info.get("cidrs", []) or info.get("ips", []) or []
-            for c in cidrs:
-                if isinstance(c, str) and '/' in c:
-                    all_cidrs.add(c.strip())
+        prov_upper = provider.upper()
+        if prov_upper not in allowed_cats_set:
+            continue
+            
+        cidrs = info.get("cidrs", []) or info.get("ips", []) or []
+        for c in cidrs:
+            if isinstance(c, str) and '/' in c:
+                try:
+                    net = ipaddress.ip_network(c.strip(), strict=False)
+                    cidr_proto = router_pb2.CIDR()
+                    cidr_proto.ip = net.network_address.packed
+                    cidr_proto.prefix = net.prefixlen
+                    provider_cidrs.append((cidr_proto, prov_upper))
+                except Exception:
+                    continue
 
-            asns = info.get("asns", []) or []
-            for asn in asns:
-                if isinstance(asn, str):
-                    asn_digits = "".join(filter(str.isdigit, asn))
-                    if asn_digits:
-                        all_asns.add(asn_digits)
+        asns = info.get("asns", []) or []
+        for asn in asns:
+            if isinstance(asn, str):
+                asn_digits = "".join(filter(str.isdigit, asn))
+                if asn_digits:
+                    asn_to_providers[asn_digits].add(prov_upper)
 
     def fetch_asn(asn):
         import time
@@ -204,36 +221,34 @@ def parse_json_source_geoip(data, allowed_cats_set):
                         p = item.get("prefix")
                         if p:
                             prefixes.append(p)
-                return prefixes
+                return asn, prefixes
             except Exception as e:
                 if attempt < max_retries - 1:
-                    print(f"⚠️ [Попытка {attempt + 1}/{max_retries}] Ошибка для AS{asn}: {e}. Повторный запрос через {backoff} сек...")
                     time.sleep(backoff)
                     backoff *= 2
                 else:
                     msg = f"Ошибка получения префиксов для AS{asn} после {max_retries} попыток: {e}"
                     print(f"❌ {msg}")
                     log_to_review(f"[ОШИБКА RIPE] {msg}")
-        return prefixes
+        return asn, []
 
-    if all_asns:
-        print(f"[JSON-IP] Найдено {len(all_asns)} ASN для обработки. Запуск резолва через RIPE...")
+    if asn_to_providers:
+        print(f"[JSON-IP] Найдено {len(asn_to_providers)} ASN для обработки. Запуск резолва через RIPE...")
         with ThreadPoolExecutor(max_workers=5) as executor:
-            for chunk in executor.map(fetch_asn, all_asns):
-                all_cidrs.update(chunk)
+            for asn, prefixes in executor.map(fetch_asn, asn_to_providers.keys()):
+                providers = asn_to_providers[asn]
+                for p_str in prefixes:
+                    try:
+                        net = ipaddress.ip_network(p_str, strict=False)
+                        cidr_proto = router_pb2.CIDR()
+                        cidr_proto.ip = net.network_address.packed
+                        cidr_proto.prefix = net.prefixlen
+                        for prov in providers:
+                            provider_cidrs.append((cidr_proto, prov))
+                    except Exception:
+                        continue
 
-    proto_cidrs = []
-    for c_str in all_cidrs:
-        try:
-            net = ipaddress.ip_network(c_str, strict=False)
-            cidr_proto = router_pb2.CIDR()
-            cidr_proto.ip = net.network_address.packed
-            cidr_proto.prefix = net.prefixlen
-            proto_cidrs.append(cidr_proto)
-        except Exception:
-            continue
-
-    return proto_cidrs
+    return provider_cidrs
 
 def parse_json_source_geosite(data, allowed_cats_set):
     proto_domains = []
@@ -247,7 +262,8 @@ def parse_json_source_geosite(data, allowed_cats_set):
     }
 
     for category, content in data.items():
-        if category.upper() not in allowed_cats_set:
+        cat_upper = category.upper()
+        if cat_upper not in allowed_cats_set:
             continue
             
         if isinstance(content, list):
@@ -268,7 +284,7 @@ def parse_json_source_geosite(data, allowed_cats_set):
                     d_proto = router_pb2.Domain()
                     d_proto.type = d_type
                     d_proto.value = d_value
-                    proto_domains.append(d_proto)
+                    proto_domains.append((d_proto, cat_upper))
                     
         elif isinstance(content, dict):
             for t_key, v_list in content.items():
@@ -279,7 +295,7 @@ def parse_json_source_geosite(data, allowed_cats_set):
                             d_proto = router_pb2.Domain()
                             d_proto.type = d_type
                             d_proto.value = item.strip()
-                            proto_domains.append(d_proto)
+                            proto_domains.append((d_proto, cat_upper))
                             
     return proto_domains
 
@@ -307,7 +323,7 @@ def parse_lst_source_geoip(data_str):
             else:
                 all_cidrs.add(line)
 
-    if Exception and all_asns:
+    if all_asns:
         all_cidrs.update(fetch_asn_prefixes(all_asns))
 
     proto_cidrs = []
@@ -392,22 +408,23 @@ def process_dat(config, list_class, attr_name):
             for rule in source['rules']:
                 src_cats = {c.upper() for c in rule['src']}
                 fetched = parse_json_source_geoip(parsed_data, src_cats) if attr_name == "cidr" else parse_json_source_geosite(parsed_data, src_cats)
-                for item in fetched:
+                for item, cat in fetched:
                     k = get_item_key(item, attr_name)
-                    upstream_keys_map[k].append(source['url'])
+                    upstream_keys_map[k].append((source['url'], cat))
         elif url_lower.endswith('.lst') or url_lower.endswith('.txt'):
             fetched = parse_lst_source_geoip(parsed_data) if attr_name == "cidr" else parse_lst_source_geosite(parsed_data)
             for item in fetched:
                 k = get_item_key(item, attr_name)
-                upstream_keys_map[k].append(source['url'])
+                upstream_keys_map[k].append((source['url'], "RAW_LST"))
         else:
             for rule in source['rules']:
                 src_cats = {c.upper() for c in rule['src']}
                 for entry in parsed_data.entry:
-                    if "*" in src_cats or entry.country_code.upper() in src_cats:
+                    current_cat = entry.country_code.upper()
+                    if "*" in src_cats or current_cat in src_cats:
                         for item in getattr(entry, attr_name):
                             k = get_item_key(item, attr_name)
-                            upstream_keys_map[k].append(source['url'])
+                            upstream_keys_map[k].append((source['url'], current_cat))
 
     for source, parsed_data in results:
         if parsed_data is None:
@@ -423,17 +440,19 @@ def process_dat(config, list_class, attr_name):
                 dst_cat = rule['dst'].upper()
                 
                 if attr_name == "cidr":
-                    fetched_cidrs = parse_json_source_geoip(parsed_data, src_cats)
-                    category_items[dst_cat].extend(fetched_cidrs)
-                    print(f"[СБОРЩИК] Интегрировано {len(fetched_cidrs)} IP-префиксов в категорию {dst_cat} из JSON")
+                    fetched = parse_json_source_geoip(parsed_data, src_cats)
+                    items = [i for i, c in fetched]
+                    category_items[dst_cat].extend(items)
+                    print(f"[СБОРЩИК] Интегрировано {len(items)} IP-префиксов в категорию {dst_cat} из JSON")
                     if is_custom:
-                        check_and_log_duplicates(fetched_cidrs, url, ", ".join(src_cats), dst_cat, attr_name, upstream_keys_map)
+                        check_and_log_duplicates(items, url, attr_name, upstream_keys_map)
                 elif attr_name == "domain":
-                    fetched_domains = parse_json_source_geosite(parsed_data, src_cats)
-                    category_items[dst_cat].extend(fetched_domains)
-                    print(f"[СБОРЩИК] Интегрировано {len(fetched_domains)} правил в категорию {dst_cat} из JSON")
+                    fetched = parse_json_source_geosite(parsed_data, src_cats)
+                    items = [i for i, c in fetched]
+                    category_items[dst_cat].extend(items)
+                    print(f"[СБОРЩИК] Интегрировано {len(items)} правил в категорию {dst_cat} из JSON")
                     if is_custom:
-                        check_and_log_duplicates(fetched_domains, url, ", ".join(src_cats), dst_cat, attr_name, upstream_keys_map)
+                        check_and_log_duplicates(items, url, attr_name, upstream_keys_map)
         
         elif url_lower.endswith('.lst') or url_lower.endswith('.txt'):
             for rule in source['rules']:
@@ -444,13 +463,13 @@ def process_dat(config, list_class, attr_name):
                     category_items[dst_cat].extend(fetched_cidrs)
                     print(f"[СБОРЩИК] Интегрировано {len(fetched_cidrs)} IP-префиксов в категорию {dst_cat} из LST")
                     if is_custom:
-                        check_and_log_duplicates(fetched_cidrs, url, "RAW_LST", dst_cat, attr_name, upstream_keys_map)
+                        check_and_log_duplicates(fetched_cidrs, url, attr_name, upstream_keys_map)
                 elif attr_name == "domain":
                     fetched_domains = parse_lst_source_geosite(parsed_data)
                     category_items[dst_cat].extend(fetched_domains)
                     print(f"[СБОРЩИК] Интегрировано {len(fetched_domains)} правил в категорию {dst_cat} из LST")
                     if is_custom:
-                        check_and_log_duplicates(fetched_domains, url, "RAW_LST", dst_cat, attr_name, upstream_keys_map)
+                        check_and_log_duplicates(fetched_domains, url, attr_name, upstream_keys_map)
                     
         else:
             for rule in source['rules']:
@@ -464,7 +483,7 @@ def process_dat(config, list_class, attr_name):
                         items = getattr(entry, attr_name)
                         category_items[target].extend(items)
                         if is_custom:
-                            check_and_log_duplicates(items, url, current_cat, target, attr_name, upstream_keys_map)
+                            check_and_log_duplicates(items, url, attr_name, upstream_keys_map)
                     
     out_list = list_class()
     for cat, items in category_items.items():
