@@ -19,14 +19,31 @@ def get_item_key(item, attr_name):
 
 def get_item_display_str(item, attr_name):
     if attr_name == "domain":
-        type_str = {0: "ключевое слово", 1: "регулярное выражение", 2: "домен", 3: "полное совпадение"}.get(item.type, str(item.type))
-        return f"тип: {type_str}, значение: {item.value}"
+        type_str = {0: "keyword", 1: "regex", 2: "domain", 3: "full"}.get(item.type, str(item.type))
+        return f"[{type_str}] {item.value}"
     else:
         try:
             addr = ipaddress.ip_address(item.ip)
-            return f"сеть/IP: {addr}/{item.prefix}"
+            return f"{addr}/{item.prefix}"
         except Exception:
-            return f"сеть/IP: неизвестно/{item.prefix}"
+            return f"неизвестно/{item.prefix}"
+
+def check_and_log_duplicates(items, url, src_cat, dst_cat, attr_name, upstream_map):
+    for item in items:
+        k = get_item_key(item, attr_name)
+        if k in upstream_map:
+            upstream_sources = sorted(list(set(upstream_map[k])))
+            upstream_str = "\n    • ".join(upstream_sources)
+            
+            msg = (
+                f"[ДУБЛИКАТ ОБНАРУЖЕН]\n"
+                f"  Кастомный источник : {url}\n"
+                f"  Направление        : [{src_cat}] ➔ [{dst_cat}]\n"
+                f"  Элемент            : {get_item_display_str(item, attr_name)}\n"
+                f"  Апстрим-источники  :\n    • {upstream_str}\n"
+                f"{'-'*70}"
+            )
+            log_to_review(msg)
 
 def optimize_domains(domains_list):
     dom_map = {}
@@ -290,7 +307,7 @@ def parse_lst_source_geoip(data_str):
             else:
                 all_cidrs.add(line)
 
-    if all_asns:
+    if Exception and all_asns:
         all_cidrs.update(fetch_asn_prefixes(all_asns))
 
     proto_cidrs = []
@@ -410,21 +427,13 @@ def process_dat(config, list_class, attr_name):
                     category_items[dst_cat].extend(fetched_cidrs)
                     print(f"[СБОРЩИК] Интегрировано {len(fetched_cidrs)} IP-префиксов в категорию {dst_cat} из JSON")
                     if is_custom:
-                        for item in fetched_cidrs:
-                            k = get_item_key(item, attr_name)
-                            if k in upstream_keys_map:
-                                upstream_sources = ", ".join(set(upstream_keys_map[k]))
-                                log_to_review(f"[ДУБЛИКАТ] Элемент '{get_item_display_str(item, attr_name)}' из кастомного источника '{url}' уже присутствует в апстрим-источниках: [{upstream_sources}].")
+                        check_and_log_duplicates(fetched_cidrs, url, ", ".join(src_cats), dst_cat, attr_name, upstream_keys_map)
                 elif attr_name == "domain":
                     fetched_domains = parse_json_source_geosite(parsed_data, src_cats)
                     category_items[dst_cat].extend(fetched_domains)
                     print(f"[СБОРЩИК] Интегрировано {len(fetched_domains)} правил в категорию {dst_cat} из JSON")
                     if is_custom:
-                        for item in fetched_domains:
-                            k = get_item_key(item, attr_name)
-                            if k in upstream_keys_map:
-                                upstream_sources = ", ".join(set(upstream_keys_map[k]))
-                                log_to_review(f"[ДУБЛИКАТ] Элемент '{get_item_display_str(item, attr_name)}' из кастомного источника '{url}' уже присутствует в апстрим-источниках: [{upstream_sources}].")
+                        check_and_log_duplicates(fetched_domains, url, ", ".join(src_cats), dst_cat, attr_name, upstream_keys_map)
         
         elif url_lower.endswith('.lst') or url_lower.endswith('.txt'):
             for rule in source['rules']:
@@ -435,21 +444,13 @@ def process_dat(config, list_class, attr_name):
                     category_items[dst_cat].extend(fetched_cidrs)
                     print(f"[СБОРЩИК] Интегрировано {len(fetched_cidrs)} IP-префиксов в категорию {dst_cat} из LST")
                     if is_custom:
-                        for item in fetched_cidrs:
-                            k = get_item_key(item, attr_name)
-                            if k in upstream_keys_map:
-                                upstream_sources = ", ".join(set(upstream_keys_map[k]))
-                                log_to_review(f"[ДУБЛИКАТ] Элемент '{get_item_display_str(item, attr_name)}' из кастомного источника '{url}' уже присутствует в апстрим-источниках: [{upstream_sources}].")
+                        check_and_log_duplicates(fetched_cidrs, url, "RAW_LST", dst_cat, attr_name, upstream_keys_map)
                 elif attr_name == "domain":
                     fetched_domains = parse_lst_source_geosite(parsed_data)
                     category_items[dst_cat].extend(fetched_domains)
                     print(f"[СБОРЩИК] Интегрировано {len(fetched_domains)} правил в категорию {dst_cat} из LST")
                     if is_custom:
-                        for item in fetched_domains:
-                            k = get_item_key(item, attr_name)
-                            if k in upstream_keys_map:
-                                upstream_sources = ", ".join(set(upstream_keys_map[k]))
-                                log_to_review(f"[ДУБЛИКАТ] Элемент '{get_item_display_str(item, attr_name)}' из кастомного источника '{url}' уже присутствует в апстрим-источниках: [{upstream_sources}].")
+                        check_and_log_duplicates(fetched_domains, url, "RAW_LST", dst_cat, attr_name, upstream_keys_map)
                     
         else:
             for rule in source['rules']:
@@ -463,11 +464,7 @@ def process_dat(config, list_class, attr_name):
                         items = getattr(entry, attr_name)
                         category_items[target].extend(items)
                         if is_custom:
-                            for item in items:
-                                k = get_item_key(item, attr_name)
-                                if k in upstream_keys_map:
-                                    upstream_sources = ", ".join(set(upstream_keys_map[k]))
-                                    log_to_review(f"[ДУБЛИКАТ] Элемент '{get_item_display_str(item, attr_name)}' из кастомного источника '{url}' уже присутствует в апстрим-источниках: [{upstream_sources}].")
+                            check_and_log_duplicates(items, url, current_cat, target, attr_name, upstream_keys_map)
                     
     out_list = list_class()
     for cat, items in category_items.items():
@@ -493,7 +490,6 @@ if __name__ == "__main__":
         print("Использование: python builder.py config.json")
         sys.exit(1)
 
-    import os
     os.makedirs("tools", exist_ok=True)
     with open("tools/review.log", "w", encoding="utf-8") as f:
         f.write("")
