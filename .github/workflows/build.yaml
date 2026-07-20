@@ -1,0 +1,113 @@
+name: Build geodata & routing
+
+on:
+  schedule:
+    - cron: '0 0,6,12,18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Protoc & Dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+          pip install protobuf
+
+      - name: Compile Protobuf Schema
+        run: protoc --python_out=. tools/router.proto
+
+      - name: Run Builder
+        run: python tools/builder.py config.json
+
+      - name: Generate SHA256 Hashes
+        run: |
+          sha256sum geosite.dat > geosite.dat.sha256
+          sha256sum geoip.dat > geoip.dat.sha256
+
+      - name: Generate Routing Configs & Links
+        shell: bash
+        run: |
+          set -euo pipefail
+          now_epoch="$(date -u +%s)"
+          
+          mkdir -p routing
+          
+          for f in routing/*.json; do
+            [ -f "$f" ] || continue
+            
+            filename=$(basename "$f")
+            name="${filename%.json}"
+            
+            echo "Processing config: $filename"
+            
+            tmp="$(mktemp)"
+            jq --arg ts "$now_epoch" '.LastUpdated = $ts' "$f" > "$tmp"
+            mv "$tmp" "$f"
+            
+            b64="$(jq -c . "$f" | base64 -w 0)"
+            
+            echo "${name}://routing/onadd/${b64}" > "routing/${name}.link"
+            
+            echo "Generated routing/${name}.link successfully"
+          done
+
+      # Измененный шаг: Сохраняем логи ошибок и дубликатов review.log в ветку main
+      - name: Commit and Push Log to Main Branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add tools/review.log
+          git commit -m "chore: update build review.log [skip ci]" || echo "No log changes to commit"
+          git pull --rebase origin main || echo "Rebase conflict, proceeding anyway"
+          git push origin HEAD:main
+        continue-on-error: true
+
+      # Шаг отправки артефактов в ветку release
+      - name: Commit to Release Branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git checkout --orphan tmp-release
+          
+          git rm -f --cached -r .
+          
+          git add *.dat *.sha256 routing/*.json routing/*.link
+          
+          git commit -m "Auto-update GeoData and Routing Configs" || echo "No changes to commit"
+          
+          git push origin tmp-release:release --force
+
+      - name: Delete old latest tag/release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release delete latest --cleanup-tag -y || true
+
+      - name: Get Date
+        id: date
+        run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
+
+      - name: Create New Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: ${{ steps.date.outputs.date }}
+          files: |
+            geosite.dat
+            geosite.dat.sha256
+            geoip.dat
+            geoip.dat.sha256
+          prerelease: false
+          make_latest: true

@@ -1,0 +1,117 @@
+{
+  "geosite": [
+    {
+      "url": "https://github.com/hydraponique/roscomvpn-geosite/raw/release/geosite.dat",
+      "rules": [
+        {
+          "src": [
+            "whitelist", "category-ru", "torrent", "apple",
+            "microsoft", "twitch", "pinterest", "steam", "epicgames",
+            "escapefromtarkov", "faceit", "private"
+          ], 
+          "dst": "GEOGAGA-DIRECT"
+        },
+        {"src": ["category-ads"], "dst": "GEOGAGA-BLOCK"},
+        {"src": ["category-geoblock-ru", "twitch-ads"], "dst": "GEOGAGA-PROXY"}
+      ]
+    },
+    {
+      "url": "https://github.com/runetfreedom/russia-v2ray-rules-dat/raw/release/geosite.dat",
+      "rules": [
+        {"src": ["category-ads", "geosite:win-spy"], "dst": "GEOGAGA-BLOCK"},
+        {"src": ["ru-blocked"], "dst": "GEOGAGA-PROXY"},
+        {"src": ["ru-available-only-inside"], "dst": "GEOGAGA-DIRECT"}
+      ]
+    },
+    {
+      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/main/custom-additions/geosite-block.lst",
+      "rules": [
+        {"src": ["*"], "dst": "GEOGAGA-BLOCK"}
+      ]
+    },
+    {
+      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/main/custom-additions/geosite-direct.lst",
+      "rules": [
+        {"src": ["*"], "dst": "GEOGAGA-DIRECT"}
+      ]
+    },
+    {
+      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/main/custom-additions/geosite-proxy.lst",
+      "rules": [
+        {"src": ["*"], "dst": "GEOGAGA-PROXY"}
+      ]
+    },
+    {
+      "url": "https://github.com/Loyalsoldier/v2ray-rules-dat/raw/release/geosite.dat",
+      "rules": [
+        {"src": ["category-ip-geo-detect", "test-ipv6"], "dst": "GEOGAGA-DIRECT"}
+      ]
+    }
+  ],
+  "geoip": [
+    {
+      "url": "https://github.com/runetfreedom/russia-v2ray-rules-dat/raw/release/geoip.dat",
+      "rules": [
+        {"src": ["ru-blocked-community", "re-filter"], "dst": "GEOGAGA-PROXY"},
+        {"src": ["ru-whitelist"], "dst": "GEOGAGA-DIRECT"}
+      ]
+    },
+    {
+      "url": "https://github.com/DanielLavrushin/b4geoip/releases/latest/download/geoip.dat",
+      "rules": [
+        {
+          "src": [
+            "aeza", "akamai", "amazon", "belcloud", "buyvm",
+            "cdn77", "cloudflare", "cogent", "constant", "contabo",
+            "datacamp", "digitalocean", "digitalone", "fastly", "gcore",
+            "glesys", "gthost", "hetzner", "meganz", "melbicom",
+            "oracle", "ovh", "scalaxy", "scaleway", "zerocdn"
+          ],
+          "dst": "GEOGAGA-PROXY"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/hydraponique/roscomvpn-geoip/raw/release/geoip.dat",
+      "rules": [
+        {"src": ["direct", "whitelist", "private"], "dst": "GEOGAGA-DIRECT"}
+      ]
+    },
+    {
+      "url": "https://github.com/PentiumB/CDN-RuleSet/releases/latest/download/geoip.dat",
+      "rules": [
+        {"src": ["amazon", "cloudflare", "fastly", "akamai", "datacamp", "oracle"], "dst": "GEOGAGA-PROXY"}
+      ]
+    },
+    {
+      "url": "https://github.com/mansourjabin/cdn-ip-database/raw/main/data/resolved_ips.json",
+      "rules": [
+        {
+          "src": [
+            "Akamai", "Alibaba Cloud CDN", "ArvanCloud", "Azion", "BaishanCloud",
+            "BelugaCDN", "Bunny", "CDN77", "CDNetworks", "CDNsun",
+            "CacheFly", "ChinaCache (QUANTIL)", "CloudFront", "Cloudflare", "Derak Cloud",
+            "EdgeNext", "Edgecast", "Edgio", "F5", "Fastly",
+            "Gcore", "Google Cloud", "Huawei Cloud CDN", "Imperva", "IranServer",
+            "KeyCDN", "Leaseweb", "Limelight", "Medianova", "Microsoft Azure",
+            "OVHcloud CDN", "ParsPack", "Qrator", "StackPath", "StormWall",
+            "Sucuri", "Tencent Cloud CDN", "X4B"
+          ],
+          "dst": "GEOGAGA-PROXY"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/main/custom-additions/geoip-direct.lst",
+      "rules": [
+        {"src": ["*"], "dst": "GEOGAGA-DIRECT"}
+      ]
+    },
+    {
+      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/main/custom-additions/geoip-proxy.lst",
+      "rules": [
+        {"src": ["*"], "dst": "GEOGAGA-PROXY"}
+      ]
+    }
+  ]
+}
