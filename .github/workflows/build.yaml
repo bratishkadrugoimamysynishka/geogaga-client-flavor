@@ -83,6 +83,10 @@ jobs:
           if [ -f review.log ]; then
             git add review.log
             git commit -m "chore: обновление build review.log [skip ci]" || echo "Нет изменений в логе для коммита"
+            
+            # Прячем сгенерированные файлы protoc и прочий мусор, чтобы очистить дерево для rebase
+            git stash --include-untracked
+            
             git pull --rebase -X theirs origin main
             git push origin HEAD:main
           fi
