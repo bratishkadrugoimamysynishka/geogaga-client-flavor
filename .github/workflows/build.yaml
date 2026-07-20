@@ -1,4 +1,4 @@
-name: Build geodata & routing
+name: Сборка geodata и маршрутизации
 
 on:
   schedule:
@@ -12,31 +12,34 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Клонирование репозитория
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Настройка Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Install Protoc & Dependencies
-        run: |
-          sudo apt-get update && sudo apt-get install -y protobuf-compiler
-          pip install protobuf
+      - name: Настройка Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Compile Protobuf Schema
+      - name: Установка зависимостей
+        run: pip install protobuf
+
+      - name: Компиляция Protobuf схемы
         run: protoc --python_out=. tools/router.proto
 
-      - name: Run Builder
+      - name: Запуск сборщика
         run: python tools/builder.py config.json
 
-      - name: Generate SHA256 Hashes
+      - name: Генерация хэшей SHA256
         run: |
           sha256sum geosite.dat > geosite.dat.sha256
           sha256sum geoip.dat > geoip.dat.sha256
 
-      - name: Generate Routing Configs & Links
+      - name: Генерация конфигураций маршрутизации и ссылок
         shell: bash
         run: |
           set -euo pipefail
@@ -50,7 +53,7 @@ jobs:
             filename=$(basename "$f")
             name="${filename%.json}"
             
-            echo "Processing config: $filename"
+            echo "Обработка конфигурации: $filename"
             
             tmp="$(mktemp)"
             jq --arg ts "$now_epoch" '.LastUpdated = $ts' "$f" > "$tmp"
@@ -60,22 +63,24 @@ jobs:
             
             echo "${name}://routing/onadd/${b64}" > "routing/${name}.link"
             
-            echo "Generated routing/${name}.link successfully"
+            echo "Ссылка routing/${name}.link успешно сгенерирована"
           done
 
-      # Измененный шаг: Сохраняем логи ошибок и дубликатов review.log в ветку main
-      - name: Commit and Push Log to Main Branch
+      - name: Коммит и пуш лога в ветку main
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add tools/review.log
-          git commit -m "chore: update build review.log [skip ci]" || echo "No log changes to commit"
-          git pull --rebase origin main || echo "Rebase conflict, proceeding anyway"
+          
+          [ -f tools/review.log ] && mv tools/review.log review.log || true
+          
+          git add review.log
+          git commit -m "chore: обновление build review.log [skip ci]" || echo "Нет изменений в логе для коммита"
+          
+          git pull --rebase -X theirs origin main
           git push origin HEAD:main
         continue-on-error: true
 
-      # Шаг отправки артефактов в ветку release
-      - name: Commit to Release Branch
+      - name: Коммит в ветку release
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -86,20 +91,20 @@ jobs:
           
           git add *.dat *.sha256 routing/*.json routing/*.link
           
-          git commit -m "Auto-update GeoData and Routing Configs" || echo "No changes to commit"
+          git commit -m "Автоматическое обновление GeoData и конфигураций маршрутизации" || echo "Нет изменений для коммита"
           
           git push origin tmp-release:release --force
 
-      - name: Delete old latest tag/release
+      - name: Удаление старого тега/релиза latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release delete latest --cleanup-tag -y || true
 
-      - name: Get Date
+      - name: Получение даты
         id: date
         run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
 
-      - name: Create New Release
+      - name: Создание нового релиза
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
