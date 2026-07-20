@@ -20,22 +20,22 @@ SOURCES = {
 OUTPUT_DIR = "parser-tmp"
 
 def get_domain_type_str(d_type):
-    if d_type == 0: return "ключевое_слово"
-    if d_type == 1: return "регулярное_выражение"
-    if d_type == 2: return "домен"
-    if d_type == 3: return "полное_совпадение"
-    return "неизвестно"
+    if d_type == 0: return "keyword"
+    if d_type == 1: return "regex"
+    if d_type == 2: return "domain"
+    if d_type == 3: return "full"
+    return "unknown"
 
 def format_domain(d):
     prefix = get_domain_type_str(d.type)
-    return f"{prefix}:{d.value}" if prefix != "неизвестно" else d.value
+    return f"{prefix}:{d.value}" if prefix != "unknown" else d.value
 
 def format_cidr(c):
     try:
         addr = ipaddress.ip_address(c.ip)
         return f"{addr}/{c.prefix}", "IPv4" if isinstance(addr, ipaddress.IPv4Address) else "IPv6"
     except Exception:
-        return f"НЕКОРРЕКТНЫЙ_IP/{c.prefix}", "некорректный"
+        return f"INVALID_IP/{c.prefix}", "invalid"
 
 def process_single_source(folder_name, url):
     print(f"Запуск обработки: {folder_name}")
