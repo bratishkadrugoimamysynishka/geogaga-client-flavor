@@ -11,7 +11,6 @@
           ], 
           "dst": "GEOGAGA-DIRECT"
         },
-        {"src": ["category-ads"], "dst": "GEOGAGA-BLOCK"},
         {"src": ["category-geoblock-ru", "twitch-ads"], "dst": "GEOGAGA-PROXY"}
       ]
     },
@@ -99,6 +98,12 @@
           ],
           "dst": "GEOGAGA-PROXY"
         }
+      ]
+    },
+    {
+      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/main/custom-additions/geoip-block.lst",
+      "rules": [
+        {"src": ["*"], "dst": "GEOGAGA-BLOCK"}
       ]
     },
     {
