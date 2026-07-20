@@ -66,7 +66,7 @@ jobs:
             echo "Ссылка routing/${name}.link успешно сгенерирована"
           done
 
-      - name: Фиксация ошибки воркфлоу в лог
+      - name: Фиксация ошибок воркфлоу в лог
         if: failure()
         run: |
           [ -f tools/review.log ] && mv tools/review.log review.log || true
@@ -84,11 +84,12 @@ jobs:
             git add review.log
             git commit -m "chore: обновление build review.log [skip ci]" || echo "Нет изменений в логе для коммита"
             
-            # Прячем сгенерированные файлы protoc и прочий мусор, чтобы очистить дерево для rebase
             git stash --include-untracked
             
             git pull --rebase -X theirs origin main
             git push origin HEAD:main
+            
+            git stash pop || true
           fi
 
       - name: Коммит в ветку release
