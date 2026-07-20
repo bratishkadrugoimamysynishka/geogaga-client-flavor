@@ -1,4 +1,4 @@
-name: Parse to lst
+name: Парсинг в lst
 
 on:
   schedule:
@@ -12,26 +12,29 @@ jobs:
   parse-data:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Клонирование репозитория
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Настройка Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Install Protoc & Dependencies
-        run: |
-          sudo apt-get update && sudo apt-get install -y protobuf-compiler
-          pip install protobuf
+      - name: Настройка Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Compile Protobuf Schema
+      - name: Установка зависимостей
+        run: pip install protobuf
+
+      - name: Компиляция Protobuf схемы
         run: protoc --python_out=. tools/router.proto
 
-      - name: Run Parser Script
+      - name: Запуск скрипта парсера
         run: python tools/parser.py
 
-      - name: Deploy Clean Results to Test Branch
+      - name: Деплой чистых результатов в ветку тестов
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: lists
