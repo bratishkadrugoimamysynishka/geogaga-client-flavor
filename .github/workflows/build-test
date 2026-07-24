@@ -1,0 +1,85 @@
+name: [TEST] Сборка geodata и маршрутизации
+
+on:
+  workflow_dispatch: # ⚡ Только ручной запуск
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Клонирование репозитория (ветка test)
+        uses: actions/checkout@v4
+        with:
+          ref: test # Загружаем исходники из ветки test
+
+      - name: Настройка Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Настройка Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Установка зависимостей
+        run: pip install protobuf
+
+      - name: Компиляция Protobuf схемы
+        run: protoc --python_out=. tools/router.proto
+
+      - name: Запуск сборщика
+        run: python tools/builder.py config.json
+
+      - name: Генерация хэшей SHA256
+        run: |
+          sha256sum geosite.dat > geosite.dat.sha256
+          sha256sum geoip.dat > geoip.dat.sha256
+
+      - name: Генерация конфигураций маршрутизации и ссылок
+        shell: bash
+        run: |
+          set -euo pipefail
+          now_epoch="$(date -u +%s)"
+          
+          mkdir -p routing
+          
+          for f in routing/*.json; do
+            [ -f "$f" ] || continue
+            
+            filename=$(basename "$f")
+            name="${filename%.json}"
+            
+            echo "Обработка конфигурации: $filename"
+            
+            tmp="$(mktemp)"
+            jq --arg ts "$now_epoch" '.LastUpdated = $ts' "$f" > "$tmp"
+            mv "$tmp" "$f"
+            
+            b64="$(jq -c . "$f" | base64 -w 0)"
+            
+            echo "${name}://routing/onadd/${b64}" > "routing/${name}.link"
+            
+            echo "Ссылка routing/${name}.link успешно сгенерирована"
+          done
+
+      - name: Подготовка директории result
+        run: |
+          mkdir -p result/routing
+          cp *.dat result/
+          cp *.sha256 result/
+          cp routing/* result/routing/ 2>/dev/null || true
+
+      - name: Коммит и пуш в ветку test
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Фиксируем только сгенерированные артефакты
+          git add result/
+          git commit -m "Тестовая сборка: GeoData и маршрутизация [test] [skip ci]" || echo "Нет изменений для коммита"
+          
+          git push origin test --force
