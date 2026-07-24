@@ -1,4 +1,4 @@
-name: [TEST] Сборка geodata и маршрутизации
+name: (TEST) Сборка geodata и маршрутизации
 
 on:
   workflow_dispatch: # ⚡ Только ручной запуск
