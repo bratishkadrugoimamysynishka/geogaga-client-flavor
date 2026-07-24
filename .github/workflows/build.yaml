@@ -79,7 +79,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
           if [ -f tools/review.log ]; then
-            git add tools/review.log
+            git add tools.log review.log || true
             git commit -m "chore: обновление build review.log [skip ci]" || echo "Нет изменений в логе для коммита"
             
             git stash --include-untracked
@@ -90,7 +90,22 @@ jobs:
             git stash pop || true
           fi
 
+      - name: Пуш результатов в ветку test
+        if: github.ref_name == 'test'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          mkdir -p result
+          # Перемещаем файлы и папку routing в директорию result
+          mv geosite.dat geosite.dat.sha256 geoip.dat geoip.dat.sha256 routing result/ || true
+          
+          git add result/
+          git commit -m "chore: update test results [skip ci]" || echo "No changes to commit"
+          git push origin test
+
       - name: Коммит в ветку release
+        if: github.ref_name != 'test'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -106,15 +121,18 @@ jobs:
           git push origin tmp-release:release --force
 
       - name: Удаление старого тега/релиза latest
+        if: github.ref_name != 'test'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release delete latest --cleanup-tag -y || true
 
       - name: Получение даты
+        if: github.ref_name != 'test'
         id: date
         run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
 
       - name: Создание нового релиза
+        if: github.ref_name != 'test'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
