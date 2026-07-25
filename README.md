@@ -1,5 +1,4 @@
-# TEST
-# GeoGaga — Client Flavor
+# [TEST] GeoGaga — Client Flavor
 
 ---
 
