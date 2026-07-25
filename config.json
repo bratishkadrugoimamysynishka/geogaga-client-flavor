@@ -6,7 +6,7 @@
         {
           "src": [
             "whitelist", "category-ru", "torrent", "apple",
-            "microsoft", "twitch", "pinterest", "steam", "epicgames",
+            "microsoft", "twitch", "pinterest", "steam",
             "escapefromtarkov", "faceit", "private"
           ], 
           "dst": "GEOGAGA-DIRECT"
