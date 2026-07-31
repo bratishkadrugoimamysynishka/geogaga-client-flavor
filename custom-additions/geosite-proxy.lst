@@ -6,3 +6,6 @@ full:archlinux.cachyos.org
 
 # Steam - медиа
 domain:akamai.steamstatic.com
+
+# Google Play - скачивание/обновление приложений
+domain:xn--ngstr-lra8j.com
