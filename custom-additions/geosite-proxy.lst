@@ -9,3 +9,12 @@ domain:akamai.steamstatic.com
 
 # Google Play - скачивание/обновление приложений
 domain:xn--ngstr-lra8j.com
+
+# Airbnb CDN
+domain:muscache.com
+
+# Cloudflare NTP (сервер времени)
+full:time.cloudflare.com
+
+# Comss - сайт и сервисы
+domain:comss.ru
