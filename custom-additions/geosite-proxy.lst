@@ -4,13 +4,13 @@ full:rgpub.io
 # CachyOS - скачивание/обновление пакетов
 full:archlinux.cachyos.org
 
-# Steam - медиа
+# Steam CDN
 domain:akamai.steamstatic.com
 
 # Google Play - скачивание/обновление приложений
 domain:xn--ngstr-lra8j.com
 
-# Airbnb - картинки/иконки
+# Airbnb CDN
 domain:muscache.com
 
 # Comss - сайт и сервисы
