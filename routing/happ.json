@@ -12,6 +12,8 @@
   "Geositeurl": "https://raw.githack.com/bratishkadrugoimamysynishka/geogaga-client-flavor/release/geosite.dat",
   "LastUpdated": "1781888908",
   "DnsHosts": {
+    "cloudflare-dns.com": "1.1.1.1",
+    "common.dot.dns.yandex.net": "77.88.8.8",
     "ntc.party": "130.255.77.28"
   },
   "DirectSites": [
