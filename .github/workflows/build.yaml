@@ -39,6 +39,11 @@ jobs:
           sha256sum geosite.dat > geosite.dat.sha256
           sha256sum geoip.dat > geoip.dat.sha256
 
+      - name: Подготовка файлов маршрутизации
+        run: |
+          mkdir -p routing
+          cp happ.json incy.json routing/ || true
+
       - name: Генерация конфигураций маршрутизации и ссылок
         shell: bash
         run: |
@@ -98,6 +103,7 @@ jobs:
           
           mkdir -p result
           mv geosite.dat geosite.dat.sha256 geoip.dat geoip.dat.sha256 routing result/ || true
+          [ -f tools/review.log ] && mv tools/review.log result/review.log || true
           
           git add result/
           git commit -m "chore: update test results [skip ci]" || echo "No changes to commit"
