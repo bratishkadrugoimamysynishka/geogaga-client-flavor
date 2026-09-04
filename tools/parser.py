@@ -31,11 +31,11 @@ def download_data(url):
 def process_source(source, is_geoip):
     url = source['url']
     print(f"Обработка источника: {url}")
-    
+
     data_bytes = download_data(url)
     if data_bytes is None:
         return
-    
+
     url_lower = url.lower()
     folder_name = get_safe_name(url)
     target_folder = os.path.join(OUTPUT_DIR, folder_name)
@@ -57,7 +57,7 @@ def process_source(source, is_geoip):
                 items_with_cat = parse_json_source_geosite(data, src_cats)
                 items = [i for i, _ in items_with_cat]
             write_lst_file(target_folder, dst_cat, items, is_geoip)
-            
+
     elif url_lower.endswith('.lst') or url_lower.endswith('.txt'):
         data_str = data_bytes.decode('utf-8', errors='ignore')
         for rule in source['rules']:
@@ -67,8 +67,8 @@ def process_source(source, is_geoip):
             else:
                 items = parse_lst_source_geosite(data_str)
             write_lst_file(target_folder, dst_cat, items, is_geoip)
-            
-    else:
+
+    else:  # .dat
         try:
             if is_geoip:
                 parsed = router_pb2.GeoIPList.FromString(data_bytes)
@@ -79,7 +79,7 @@ def process_source(source, is_geoip):
         except Exception as e:
             print(f"❌ Ошибка распаковки protobuf {url}: {e}")
             return
-        
+
         for rule in source['rules']:
             src_cats = {c.upper() for c in rule['src']}
             dst_cat = rule['dst'].upper()
@@ -97,12 +97,11 @@ def write_lst_file(folder, category, items, is_geoip):
     safe_name = "".join([c for c in category if c.isalpha() or c.isdigit() or c in ('-', '_')]).rstrip()
     filename = f"{safe_name}.lst"
     filepath = os.path.join(folder, filename)
-    
+
     lines = []
     for item in items:
         if is_geoip:
             try:
-                import ipaddress
                 addr = ipaddress.ip_address(item.ip)
                 lines.append(f"{addr}/{item.prefix}")
             except Exception:
@@ -111,7 +110,7 @@ def write_lst_file(folder, category, items, is_geoip):
             type_map = {0: "keyword", 1: "regex", 2: "domain", 3: "full"}
             prefix = type_map.get(item.type, "unknown")
             lines.append(f"{prefix}:{item.value}" if prefix != "unknown" else item.value)
-    
+
     with open(filepath, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
     print(f"  ✅ Создан {filename} ({len(lines)} элементов)")
@@ -121,25 +120,25 @@ def main():
         import shutil
         shutil.rmtree(OUTPUT_DIR)
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    
+
     config_path = "config.json"
     if not os.path.exists(config_path):
         print("❌ config.json не найден!")
         sys.exit(1)
-    
+
     with open(config_path, 'r') as f:
         config = json.load(f)
-    
+
     if 'geosite' in config:
         print("=== Обработка geosite ===")
         with ThreadPoolExecutor(max_workers=4) as executor:
             executor.map(lambda src: process_source(src, False), config['geosite'])
-    
+
     if 'geoip' in config:
         print("=== Обработка geoip ===")
         with ThreadPoolExecutor(max_workers=4) as executor:
             executor.map(lambda src: process_source(src, True), config['geoip'])
-    
+
     print("✅ Все задачи парсинга завершены.")
 
 if __name__ == "__main__":
