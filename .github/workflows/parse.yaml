@@ -13,7 +13,7 @@ permissions:
 jobs:
   parse-data:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch != 'test' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Клонирование репозитория
         uses: actions/checkout@v4
@@ -37,10 +37,27 @@ jobs:
       - name: Запуск скрипта парсера
         run: python tools/parser.py
 
-      - name: Деплой чистых результатов в ветку тестов
+      - name: Подготовка папки result/lists для test
+        if: github.ref_name == 'test'
+        run: |
+          mkdir -p result/lists
+          cp -r parser-tmp/* result/lists/
+
+      - name: Деплой для ветки main в ветку lists (чистый деплой)
+        if: github.ref_name == 'main'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: lists
           folder: parser-tmp
           clean: true
           single-commit: true
+
+      - name: Деплой для ветки test в result/lists (внутри test)
+        if: github.ref_name == 'test'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add result/lists/
+          git commit -m "chore: обновление списков (test) [skip ci]" || echo "Нет изменений для коммита"
+          git push origin test
