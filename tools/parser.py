@@ -1,7 +1,9 @@
 import os
+import sys
 import json
 import urllib.request
 import ipaddress
+import re
 import collections
 from concurrent.futures import ThreadPoolExecutor
 import router_pb2
@@ -13,28 +15,31 @@ from common import (
 
 OUTPUT_DIR = "parser-tmp"
 
-def get_folder_name(url):
-    import re
-    path = url.split('://')[-1].split('/', 1)[-1]  # после домена
-    parts = path.split('/')
-    repo_name = None
-    file_name = parts[-1].split('.')[0]  # geosite или geoip
-    for i, p in enumerate(parts):
-        if 'geosite' in p or 'geoip' in p or 'rules-dat' in p or 'cdn-ip-database' in p:
-            repo_name = p
-            break
-    if not repo_name:
-        for i, p in enumerate(parts):
-            if p in ('raw', 'blob', 'releases', 'latest', 'download'):
-                if i+1 < len(parts):
-                    repo_name = parts[i+1]
-                    break
-    if not repo_name:
-        repo_name = parts[-2] if len(parts) >= 2 else parts[-1]
-    file_name = file_name.replace('.dat', '').replace('.lst', '').replace('.txt', '').replace('.json', '')
-    folder = f"{repo_name}-{file_name}" if repo_name else file_name
-    folder = re.sub(r'[^a-zA-Z0-9\-_]', '-', folder)
-    return folder
+def download_file(url, dest):
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            with open(dest, 'wb') as f:
+                f.write(resp.read())
+        return dest
+    except Exception as e:
+        print(f"❌ Ошибка скачивания {url}: {e}")
+        return None
+
+def get_repo_name(url):
+    match = re.search(r'github\.com/([^/]+/[^/]+)', url)
+    if match:
+        return match.group(1)
+    return None
+
+def get_folder_name(url, is_geoip):
+    repo = get_repo_name(url)
+    if repo:
+        suffix = 'geoip' if is_geoip else 'geosite'
+        return f"{repo.replace('/', '-')}-{suffix}"
+    # fallback (если не GitHub)
+    from common import get_folder_name as old_get
+    return old_get(url)
 
 def download_data(url):
     try:
@@ -47,6 +52,10 @@ def download_data(url):
 
 def process_source(source, is_geoip):
     url = source['url']
+    if "custom-additions" in url:
+        print(f"⏩ Пропускаем custom-additions: {url}")
+        return
+
     print(f"Обработка источника: {url}")
 
     data_bytes = download_data(url)
@@ -54,7 +63,7 @@ def process_source(source, is_geoip):
         return
 
     url_lower = url.lower()
-    folder_name = get_folder_name(url)
+    folder_name = get_folder_name(url, is_geoip)
     target_folder = os.path.join(OUTPUT_DIR, folder_name)
     os.makedirs(target_folder, exist_ok=True)
 
@@ -69,7 +78,7 @@ def process_source(source, is_geoip):
             dst_cat = rule['dst'].upper()
             if is_geoip:
                 items_with_cat = parse_json_source_geoip(data, src_cats)
-                items = [i for i, _ in items_with_cat]
+                items = [i for i, _, _ in items_with_cat]
             else:
                 items_with_cat = parse_json_source_geosite(data, src_cats)
                 items = [i for i, _ in items_with_cat]
@@ -111,7 +120,7 @@ def write_lst_file(folder, category, items, is_geoip):
     if not items:
         print(f"  ⚠️ Категория {category} пуста, файл не создан.")
         return
-    safe_name = "".join([c for c in category if c.isalpha() or c.isdigit() or c in ('-', '_')]).rstrip()
+    safe_name = "".join(c if c.isalnum() or c in ('-', '_') else '_' for c in category.upper())
     filename = f"{safe_name}.lst"
     filepath = os.path.join(folder, filename)
 
@@ -131,6 +140,69 @@ def write_lst_file(folder, category, items, is_geoip):
     with open(filepath, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
     print(f"  ✅ Создан {filename} ({len(lines)} элементов)")
+
+def parse_geogaga_dat(filepath, is_geoip):
+    with open(filepath, 'rb') as f:
+        data = f.read()
+    if is_geoip:
+        parsed = router_pb2.GeoIPList.FromString(data)
+        attr = 'cidr'
+    else:
+        parsed = router_pb2.GeoSiteList.FromString(data)
+        attr = 'domain'
+
+    folder = 'geogaga-client-flavor-geosite' if not is_geoip else 'geogaga-client-flavor-geoip'
+    target_folder = os.path.join(OUTPUT_DIR, folder)
+    os.makedirs(target_folder, exist_ok=True)
+
+    for entry in parsed.entry:
+        country = entry.country_code.upper()
+        if not country:
+            continue
+        items = getattr(entry, attr)
+        if not items:
+            continue
+        write_lst_file(target_folder, country, items, is_geoip)
+
+def process_geogaga_dat():
+    branch = os.environ.get('GITHUB_REF_NAME', '')
+    geosite_path = None
+    geoip_path = None
+
+    if branch == 'main':
+        print("🔍 Ветка main: скачиваем geodata из release...")
+        geosite_path = download_file(
+            'https://raw.githubusercontent.com/bratishkadrugoimamysynishka/geogaga-client-flavor/release/geosite.dat',
+            'geosite_release.dat'
+        )
+        geoip_path = download_file(
+            'https://raw.githubusercontent.com/bratishkadrugoimamysynishka/geogaga-client-flavor/release/geoip.dat',
+            'geoip_release.dat'
+        )
+    elif branch == 'test':
+        print("🔍 Ветка test: берём geodata из result/...")
+        if os.path.exists('result/geosite.dat'):
+            geosite_path = 'result/geosite.dat'
+        if os.path.exists('result/geoip.dat'):
+            geoip_path = 'result/geoip.dat'
+    else:
+        print("🔍 Неизвестная ветка или ручной запуск: ищем geodata в текущей папке...")
+        if os.path.exists('geosite.dat'):
+            geosite_path = 'geosite.dat'
+        if os.path.exists('geoip.dat'):
+            geoip_path = 'geoip.dat'
+
+    if geosite_path:
+        print("🔄 Обработка geogaga geosite.dat...")
+        parse_geogaga_dat(geosite_path, is_geoip=False)
+    else:
+        print("⚠️ geosite.dat не найден, пропускаем.")
+
+    if geoip_path:
+        print("🔄 Обработка geogaga geoip.dat...")
+        parse_geogaga_dat(geoip_path, is_geoip=True)
+    else:
+        print("⚠️ geoip.dat не найден, пропускаем.")
 
 def main():
     if os.path.exists(OUTPUT_DIR):
@@ -156,8 +228,9 @@ def main():
         with ThreadPoolExecutor(max_workers=4) as executor:
             executor.map(lambda src: process_source(src, True), config['geoip'])
 
+    process_geogaga_dat()
+
     print("✅ Все задачи парсинга завершены.")
 
 if __name__ == "__main__":
-    import sys
     main()
