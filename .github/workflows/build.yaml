@@ -73,7 +73,7 @@ jobs:
           echo "[$(date -u +'%Y-%m-%d %H:%M:%S')] ОШИБКА: Сбой выполнения шагов сборки в GitHub Actions" >> review.log
 
       - name: Коммит и пуш лога в ветку main
-        if: github.ref_name == 'main'   # только при работе на ветке main
+        if: github.ref_name == 'main'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -104,7 +104,7 @@ jobs:
           git push origin test
 
       - name: Коммит в ветку release
-        if: github.ref_name == 'main'   # только для main
+        if: github.ref_name == 'main'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
