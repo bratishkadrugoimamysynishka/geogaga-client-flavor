@@ -17,5 +17,5 @@
 
 | Клиент | 🔗 Ссылка для импорта | 📝 Содержимое ссылки | 📄 JSON-конфиг |
 | :---: | :--- | :--- | :--- |
-| **Incy** | [geogaga-incy.rf.gd](https://geogaga-incy.rf.gd) | [Смотреть](https://raw.githack.com/bratishkadrugoimamysynishka/geogaga-client-flavor/release/routing/incy.link) | [Смотреть](https://raw.githack.com/bratishkadrugoimamysynishka/geogaga-client-flavor/release/routing/incy.json) |
-| **Happ** | [geogaga-happ.rf.gd](https://geogaga-happ.rf.gd/) | [Смотреть](https://raw.githack.com/bratishkadrugoimamysynishka/geogaga-client-flavor/release/routing/happ.link) | [Смотреть](https://raw.githack.com/bratishkadrugoimamysynishka/geogaga-client-flavor/release/routing/happ.json) |
+| **Incy** | [geogaga-incy.rf.gd](https://geogaga-incy.rf.gd) | [Смотреть](https://raw.githack.com/bratishkadrugoimamysynishka/geogaga-client-flavor/test/result/routing/incy.link) | [Смотреть](https://raw.githack.com/bratishkadrugoimamysynishka/geogaga-client-flavor/test/result/routing/incy.json) |
+| **Happ** | [geogaga-happ.rf.gd](https://geogaga-happ.rf.gd/) | [Смотреть](https://raw.githack.com/bratishkadrugoimamysynishka/geogaga-client-flavor/test/result/routing/happ.link) | [Смотреть](https://raw.githack.com/bratishkadrugoimamysynishka/geogaga-client-flavor/test/result/routing/happ.json) |
