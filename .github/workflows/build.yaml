@@ -103,9 +103,9 @@ jobs:
           
           mkdir -p result
           mv geosite.dat geosite.dat.sha256 geoip.dat geoip.dat.sha256 routing result/ || true
-          [ -f tools/review.log ] && mv tools/review.log result/review.log || true
           
           git add result/
+          [ -f tools/review.log ] && git add tools/review.log || true
           git commit -m "chore: update test results [skip ci]" || echo "No changes to commit"
           git push origin test
 
