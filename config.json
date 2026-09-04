@@ -115,6 +115,9 @@
             "ru-blocked-community",
             "re-filter"
           ],
+          "exclude": [
+            "173.194.0.0/16"
+          ],
           "dst": "GEOGAGA-PROXY"
         },
         {
