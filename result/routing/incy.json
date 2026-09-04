@@ -10,7 +10,7 @@
   "DomesticDNSIP": "77.88.8.8",
   "Geoipurl": "https://raw.githack.com/bratishkadrugoimamysynishka/geogaga-client-flavor/release/geoip.dat",
   "Geositeurl": "https://raw.githack.com/bratishkadrugoimamysynishka/geogaga-client-flavor/release/geosite.dat",
-  "LastUpdated": "1784922049",
+  "LastUpdated": "1788537810",
   "DnsHosts": {
     "cloudflare-dns.com": "1.1.1.1",
     "ntc.party": "130.255.77.28"
