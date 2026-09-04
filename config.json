@@ -57,7 +57,7 @@
       ]
     },
     {
-      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/main/custom-additions/geosite-block.lst",
+      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/test/custom-additions/geosite-block.lst",
       "rules": [
         {
           "src": [
@@ -68,7 +68,7 @@
       ]
     },
     {
-      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/main/custom-additions/geosite-direct.lst",
+      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/test/custom-additions/geosite-direct.lst",
       "rules": [
         {
           "src": [
@@ -79,7 +79,7 @@
       ]
     },
     {
-      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/main/custom-additions/geosite-proxy.lst",
+      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/test/custom-additions/geosite-proxy.lst",
       "rules": [
         {
           "src": [
@@ -241,7 +241,7 @@
       ]
     },
     {
-      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/main/custom-additions/geoip-block.lst",
+      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/test/custom-additions/geoip-block.lst",
       "rules": [
         {
           "src": [
@@ -252,7 +252,7 @@
       ]
     },
     {
-      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/main/custom-additions/geoip-direct.lst",
+      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/test/custom-additions/geoip-direct.lst",
       "rules": [
         {
           "src": [
@@ -263,7 +263,7 @@
       ]
     },
     {
-      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/main/custom-additions/geoip-proxy.lst",
+      "url": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/test/custom-additions/geoip-proxy.lst",
       "rules": [
         {
           "src": [
