@@ -13,11 +13,28 @@ from common import (
 
 OUTPUT_DIR = "parser-tmp"
 
-def get_safe_name(url):
-    import hashlib
-    base = url.split('/')[-1].split('.')[0] or 'source'
-    hash_part = hashlib.md5(url.encode()).hexdigest()[:8]
-    return f"{base}_{hash_part}"
+def get_folder_name(url):
+    import re
+    path = url.split('://')[-1].split('/', 1)[-1]  # после домена
+    parts = path.split('/')
+    repo_name = None
+    file_name = parts[-1].split('.')[0]  # geosite или geoip
+    for i, p in enumerate(parts):
+        if 'geosite' in p or 'geoip' in p or 'rules-dat' in p or 'cdn-ip-database' in p:
+            repo_name = p
+            break
+    if not repo_name:
+        for i, p in enumerate(parts):
+            if p in ('raw', 'blob', 'releases', 'latest', 'download'):
+                if i+1 < len(parts):
+                    repo_name = parts[i+1]
+                    break
+    if not repo_name:
+        repo_name = parts[-2] if len(parts) >= 2 else parts[-1]
+    file_name = file_name.replace('.dat', '').replace('.lst', '').replace('.txt', '').replace('.json', '')
+    folder = f"{repo_name}-{file_name}" if repo_name else file_name
+    folder = re.sub(r'[^a-zA-Z0-9\-_]', '-', folder)
+    return folder
 
 def download_data(url):
     try:
@@ -37,7 +54,7 @@ def process_source(source, is_geoip):
         return
 
     url_lower = url.lower()
-    folder_name = get_safe_name(url)
+    folder_name = get_folder_name(url)
     target_folder = os.path.join(OUTPUT_DIR, folder_name)
     os.makedirs(target_folder, exist_ok=True)
 
