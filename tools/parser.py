@@ -1,125 +1,146 @@
 import os
+import json
 import urllib.request
 import ipaddress
 import collections
 from concurrent.futures import ThreadPoolExecutor
 import router_pb2
-
-SOURCES = {
-    "Client-Flavor-geosite": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/release/geosite.dat",
-    "Client-Flavor-geoip": "https://github.com/bratishkadrugoimamysynishka/geogaga-client-flavor/raw/release/geoip.dat",
-    "Loyalsoldier-geosite": "https://github.com/Loyalsoldier/v2ray-rules-dat/raw/release/geosite.dat",
-    "Loyalsoldier-geoip": "https://github.com/Loyalsoldier/v2ray-rules-dat/raw/release/geoip.dat",
-    "roscomvpn-geosite": "https://github.com/hydraponique/roscomvpn-geosite/raw/release/geosite.dat",
-    "roscomvpn-geoip": "https://github.com/hydraponique/roscomvpn-geoip/raw/release/geoip.dat",
-    "runetfreedom-geosite": "https://github.com/runetfreedom/russia-v2ray-rules-dat/raw/release/geosite.dat",
-    "runetfreedom-geoip": "https://github.com/runetfreedom/russia-v2ray-rules-dat/raw/release/geoip.dat",
-    "b4-geoip": "https://github.com/DanielLavrushin/b4geoip/releases/latest/download/geoip.dat"
-}
+from common import (
+    parse_json_source_geoip, parse_json_source_geosite,
+    parse_lst_source_geoip, parse_lst_source_geosite,
+    get_item_key
+)
 
 OUTPUT_DIR = "parser-tmp"
 
-def get_domain_type_str(d_type):
-    if d_type == 0: return "keyword"
-    if d_type == 1: return "regex"
-    if d_type == 2: return "domain"
-    if d_type == 3: return "full"
-    return "unknown"
+def get_safe_name(url):
+    import hashlib
+    base = url.split('/')[-1].split('.')[0] or 'source'
+    hash_part = hashlib.md5(url.encode()).hexdigest()[:8]
+    return f"{base}_{hash_part}"
 
-def format_domain(d):
-    prefix = get_domain_type_str(d.type)
-    return f"{prefix}:{d.value}" if prefix != "unknown" else d.value
-
-def format_cidr(c):
+def download_data(url):
     try:
-        addr = ipaddress.ip_address(c.ip)
-        return f"{addr}/{c.prefix}", "IPv4" if isinstance(addr, ipaddress.IPv4Address) else "IPv6"
-    except Exception:
-        return f"INVALID_IP/{c.prefix}", "invalid"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return resp.read()
+    except Exception as e:
+        print(f"❌ Ошибка загрузки {url}: {e}")
+        return None
 
-def process_single_source(folder_name, url):
-    print(f"Запуск обработки: {folder_name}")
-    
+def process_source(source, is_geoip):
+    url = source['url']
+    print(f"Обработка источника: {url}")
+
+    data_bytes = download_data(url)
+    if data_bytes is None:
+        return
+
+    url_lower = url.lower()
+    folder_name = get_safe_name(url)
     target_folder = os.path.join(OUTPUT_DIR, folder_name)
     os.makedirs(target_folder, exist_ok=True)
-    
-    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-    try:
-        with urllib.request.urlopen(req) as response:
-            data = response.read()
-    except Exception as e:
-        print(f"❌ Не удалось загрузить {folder_name}: {e}")
-        return
 
-    is_geoip = "geoip" in folder_name.lower() or "geoip" in url.lower()
-    
-    try:
-        if is_geoip:
-            parsed_list = router_pb2.GeoIPList.FromString(data)
-            attr_name = "cidr"
-        else:
-            parsed_list = router_pb2.GeoSiteList.FromString(data)
-            attr_name = "domain"
-    except Exception as e:
-        print(f"❌ Не удалось распарсить protobuf для {folder_name}: {e}")
-        return
-
-    total_elements = 0
-    total_categories = len(parsed_list.entry)
-    summary_lines = []
-    
-    global_type_counts = collections.Counter()
-
-    for entry in parsed_list.entry:
-        cat_name = entry.country_code
-        safe_cat_name = "".join([c for c in cat_name if c.isalpha() or c.isdigit() or c in ('-', '_')]).rstrip()
-        items = getattr(entry, attr_name)
-        
-        elements_count = len(items)
-        total_elements += elements_count
-        
-        cat_type_counts = collections.Counter()
-        lst_lines = []
-        
-        for item in items:
+    if url_lower.endswith('.json'):
+        try:
+            data = json.loads(data_bytes.decode('utf-8'))
+        except Exception as e:
+            print(f"❌ Ошибка парсинга JSON {url}: {e}")
+            return
+        for rule in source['rules']:
+            src_cats = {c.upper() for c in rule['src']}
+            dst_cat = rule['dst'].upper()
             if is_geoip:
-                cidr_str, ip_type = format_cidr(item)
-                lst_lines.append(cidr_str)
-                cat_type_counts[ip_type] += 1
-                global_type_counts[ip_type] += 1
+                items_with_cat = parse_json_source_geoip(data, src_cats)
+                items = [i for i, _ in items_with_cat]
             else:
-                t_str = get_domain_type_str(item.type)
-                lst_lines.append(format_domain(item))
-                cat_type_counts[t_str] += 1
-                global_type_counts[t_str] += 1
+                items_with_cat = parse_json_source_geosite(data, src_cats)
+                items = [i for i, _ in items_with_cat]
+            write_lst_file(target_folder, dst_cat, items, is_geoip)
 
-        type_details = ", ".join([f"{k}: {v}" for k, v in cat_type_counts.items()])
-        summary_lines.append(f"- {cat_name}: {elements_count} элементов ({type_details})")
-        
-        lst_path = os.path.join(target_folder, f"{safe_cat_name}.lst")
-        with open(lst_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(lst_lines) + "\n")
+    elif url_lower.endswith('.lst') or url_lower.endswith('.txt'):
+        data_str = data_bytes.decode('utf-8', errors='ignore')
+        for rule in source['rules']:
+            dst_cat = rule['dst'].upper()
+            if is_geoip:
+                items = parse_lst_source_geoip(data_str)
+            else:
+                items = parse_lst_source_geosite(data_str)
+            write_lst_file(target_folder, dst_cat, items, is_geoip)
 
-    summary_path = os.path.join(target_folder, "_summary.txt")
-    with open(summary_path, "w", encoding="utf-8") as f:
-        f.write(f"=== СВОДКА: {folder_name} ===\n")
-        f.write(f"Всего категорий: {total_categories}\n")
-        f.write(f"Всего элементов: {total_elements}\n\n")
-        
-        f.write("Всего элементов по типам данных:\n")
-        for k, v in global_type_counts.items():
-            f.write(f"  {k}: {v}\n")
-        f.write("\n")
-        
-        f.write("Детализация по категориям:\n")
-        f.write("\n".join(summary_lines) + "\n")
-        
-    print(f"✓ Завершено: {folder_name}")
+    else:  # .dat
+        try:
+            if is_geoip:
+                parsed = router_pb2.GeoIPList.FromString(data_bytes)
+                attr_name = "cidr"
+            else:
+                parsed = router_pb2.GeoSiteList.FromString(data_bytes)
+                attr_name = "domain"
+        except Exception as e:
+            print(f"❌ Ошибка распаковки protobuf {url}: {e}")
+            return
 
-def parse_and_dump_parallel():
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        executor.map(lambda item: process_single_source(*item), SOURCES.items())
+        for rule in source['rules']:
+            src_cats = {c.upper() for c in rule['src']}
+            dst_cat = rule['dst'].upper()
+            items = []
+            for entry in parsed.entry:
+                current_cat = entry.country_code.upper()
+                if "*" in src_cats or current_cat in src_cats:
+                    items.extend(getattr(entry, attr_name))
+            write_lst_file(target_folder, dst_cat, items, is_geoip)
+
+def write_lst_file(folder, category, items, is_geoip):
+    if not items:
+        print(f"  ⚠️ Категория {category} пуста, файл не создан.")
+        return
+    safe_name = "".join([c for c in category if c.isalpha() or c.isdigit() or c in ('-', '_')]).rstrip()
+    filename = f"{safe_name}.lst"
+    filepath = os.path.join(folder, filename)
+
+    lines = []
+    for item in items:
+        if is_geoip:
+            try:
+                addr = ipaddress.ip_address(item.ip)
+                lines.append(f"{addr}/{item.prefix}")
+            except Exception:
+                lines.append(f"INVALID_IP/{item.prefix}")
+        else:
+            type_map = {0: "keyword", 1: "regex", 2: "domain", 3: "full"}
+            prefix = type_map.get(item.type, "unknown")
+            lines.append(f"{prefix}:{item.value}" if prefix != "unknown" else item.value)
+
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    print(f"  ✅ Создан {filename} ({len(lines)} элементов)")
+
+def main():
+    if os.path.exists(OUTPUT_DIR):
+        import shutil
+        shutil.rmtree(OUTPUT_DIR)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    config_path = "config.json"
+    if not os.path.exists(config_path):
+        print("❌ config.json не найден!")
+        sys.exit(1)
+
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+
+    if 'geosite' in config:
+        print("=== Обработка geosite ===")
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            executor.map(lambda src: process_source(src, False), config['geosite'])
+
+    if 'geoip' in config:
+        print("=== Обработка geoip ===")
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            executor.map(lambda src: process_source(src, True), config['geoip'])
+
+    print("✅ Все задачи парсинга завершены.")
 
 if __name__ == "__main__":
-    parse_and_dump_parallel()
-    print("Все задачи парсинга выполнены.")
+    import sys
+    main()
