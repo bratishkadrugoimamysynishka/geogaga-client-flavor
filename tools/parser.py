@@ -4,13 +4,12 @@ import json
 import urllib.request
 import ipaddress
 import re
-import collections
 from concurrent.futures import ThreadPoolExecutor
 import router_pb2
 from common import (
     parse_json_source_geoip, parse_json_source_geosite,
     parse_lst_source_geoip, parse_lst_source_geosite,
-    get_item_key
+    get_item_key, fetch_asn
 )
 
 OUTPUT_DIR = "parser-tmp"
@@ -28,18 +27,16 @@ def download_file(url, dest):
 
 def get_repo_name(url):
     match = re.search(r'github\.com/([^/]+/[^/]+)', url)
-    if match:
-        return match.group(1)
-    return None
+    return match.group(1) if match else None
 
 def get_folder_name(url, is_geoip):
     repo = get_repo_name(url)
     if repo:
         suffix = 'geoip' if is_geoip else 'geosite'
         return f"{repo.replace('/', '-')}-{suffix}"
-    # fallback (если не GitHub)
-    from common import get_folder_name as old_get
-    return old_get(url)
+    parts = url.split('/')
+    name = parts[-1].split('.')[0] if parts else 'unknown'
+    return f"{name}-{'geoip' if is_geoip else 'geosite'}"
 
 def download_data(url):
     try:
@@ -49,72 +46,6 @@ def download_data(url):
     except Exception as e:
         print(f"❌ Ошибка загрузки {url}: {e}")
         return None
-
-def process_source(source, is_geoip):
-    url = source['url']
-    if "custom-additions" in url:
-        print(f"⏩ Пропускаем custom-additions: {url}")
-        return
-
-    print(f"Обработка источника: {url}")
-
-    data_bytes = download_data(url)
-    if data_bytes is None:
-        return
-
-    url_lower = url.lower()
-    folder_name = get_folder_name(url, is_geoip)
-    target_folder = os.path.join(OUTPUT_DIR, folder_name)
-    os.makedirs(target_folder, exist_ok=True)
-
-    if url_lower.endswith('.json'):
-        try:
-            data = json.loads(data_bytes.decode('utf-8'))
-        except Exception as e:
-            print(f"❌ Ошибка парсинга JSON {url}: {e}")
-            return
-        for rule in source['rules']:
-            src_cats = {c.upper() for c in rule['src']}
-            dst_cat = rule['dst'].upper()
-            if is_geoip:
-                items_with_cat = parse_json_source_geoip(data, src_cats)
-                items = [i for i, _, _ in items_with_cat]
-            else:
-                items_with_cat = parse_json_source_geosite(data, src_cats)
-                items = [i for i, _ in items_with_cat]
-            write_lst_file(target_folder, dst_cat, items, is_geoip)
-
-    elif url_lower.endswith('.lst') or url_lower.endswith('.txt'):
-        data_str = data_bytes.decode('utf-8', errors='ignore')
-        for rule in source['rules']:
-            dst_cat = rule['dst'].upper()
-            if is_geoip:
-                items = parse_lst_source_geoip(data_str)
-            else:
-                items = parse_lst_source_geosite(data_str)
-            write_lst_file(target_folder, dst_cat, items, is_geoip)
-
-    else:  # .dat
-        try:
-            if is_geoip:
-                parsed = router_pb2.GeoIPList.FromString(data_bytes)
-                attr_name = "cidr"
-            else:
-                parsed = router_pb2.GeoSiteList.FromString(data_bytes)
-                attr_name = "domain"
-        except Exception as e:
-            print(f"❌ Ошибка распаковки protobuf {url}: {e}")
-            return
-
-        for rule in source['rules']:
-            src_cats = {c.upper() for c in rule['src']}
-            dst_cat = rule['dst'].upper()
-            items = []
-            for entry in parsed.entry:
-                current_cat = entry.country_code.upper()
-                if "*" in src_cats or current_cat in src_cats:
-                    items.extend(getattr(entry, attr_name))
-            write_lst_file(target_folder, dst_cat, items, is_geoip)
 
 def write_lst_file(folder, category, items, is_geoip):
     if not items:
@@ -140,6 +71,142 @@ def write_lst_file(folder, category, items, is_geoip):
     with open(filepath, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
     print(f"  ✅ Создан {filename} ({len(lines)} элементов)")
+
+def process_dat(data_bytes, is_geoip, target_folder):
+    try:
+        if is_geoip:
+            parsed = router_pb2.GeoIPList.FromString(data_bytes)
+            attr = 'cidr'
+        else:
+            parsed = router_pb2.GeoSiteList.FromString(data_bytes)
+            attr = 'domain'
+    except Exception as e:
+        print(f"❌ Ошибка распаковки protobuf: {e}")
+        return
+
+    for entry in parsed.entry:
+        country = entry.country_code.upper()
+        if not country:
+            continue
+        items = getattr(entry, attr)
+        if not items:
+            continue
+        write_lst_file(target_folder, country, items, is_geoip)
+
+def process_json_geoip(data, target_folder):
+    for provider, info in data.items():
+        items = []
+        cidrs = info.get("cidrs", []) or info.get("ips", []) or []
+        for c in cidrs:
+            if isinstance(c, str) and '/' in c:
+                try:
+                    net = ipaddress.ip_network(c.strip(), strict=False)
+                    cidr_proto = router_pb2.CIDR()
+                    cidr_proto.ip = net.network_address.packed
+                    cidr_proto.prefix = net.prefixlen
+                    items.append(cidr_proto)
+                except Exception:
+                    continue
+
+        asns = info.get("asns", []) or []
+        for asn in asns:
+            if isinstance(asn, str):
+                asn_digits = "".join(filter(str.isdigit, asn))
+                if asn_digits:
+                    prefixes = fetch_asn(asn_digits)
+                    for p_str in prefixes:
+                        try:
+                            net = ipaddress.ip_network(p_str, strict=False)
+                            cidr_proto = router_pb2.CIDR()
+                            cidr_proto.ip = net.network_address.packed
+                            cidr_proto.prefix = net.prefixlen
+                            items.append(cidr_proto)
+                        except Exception:
+                            continue
+
+        if items:
+            write_lst_file(target_folder, provider, items, is_geoip=True)
+
+def process_json_geosite(data, target_folder):
+    type_mapping = {
+        "plain": router_pb2.Domain.Plain,
+        "keyword": router_pb2.Domain.Plain,
+        "regex": router_pb2.Domain.Regex,
+        "domain": router_pb2.Domain.Domain,
+        "full": router_pb2.Domain.Full
+    }
+
+    for category, content in data.items():
+        items = []
+        if isinstance(content, list):
+            for item in content:
+                if not isinstance(item, str):
+                    continue
+                d_type = router_pb2.Domain.Domain
+                d_value = item.strip()
+                if ":" in d_value:
+                    prefix, value = d_value.split(":", 1)
+                    if prefix.lower() in type_mapping:
+                        d_type = type_mapping[prefix.lower()]
+                        d_value = value.strip()
+                if d_value:
+                    d_proto = router_pb2.Domain()
+                    d_proto.type = d_type
+                    d_proto.value = d_value
+                    items.append(d_proto)
+        elif isinstance(content, dict):
+            for t_key, v_list in content.items():
+                if t_key.lower() in type_mapping and isinstance(v_list, list):
+                    d_type = type_mapping[t_key.lower()]
+                    for item in v_list:
+                        if isinstance(item, str) and item.strip():
+                            d_proto = router_pb2.Domain()
+                            d_proto.type = d_type
+                            d_proto.value = item.strip()
+                            items.append(d_proto)
+
+        if items:
+            write_lst_file(target_folder, category, items, is_geoip=False)
+
+def process_source(source, is_geoip):
+    url = source['url']
+    if "custom-additions" in url:
+        print(f"⏩ Пропускаем custom-additions: {url}")
+        return
+
+    print(f"Обработка источника: {url}")
+    data_bytes = download_data(url)
+    if data_bytes is None:
+        return
+
+    folder_name = get_folder_name(url, is_geoip)
+    target_folder = os.path.join(OUTPUT_DIR, folder_name)
+    os.makedirs(target_folder, exist_ok=True)
+
+    url_lower = url.lower()
+    if url_lower.endswith('.json'):
+        try:
+            data = json.loads(data_bytes.decode('utf-8'))
+        except Exception as e:
+            print(f"❌ Ошибка парсинга JSON {url}: {e}")
+            return
+
+        if is_geoip:
+            process_json_geoip(data, target_folder)
+        else:
+            process_json_geosite(data, target_folder)
+
+    elif url_lower.endswith('.lst') or url_lower.endswith('.txt'):
+        data_str = data_bytes.decode('utf-8', errors='ignore')
+        if is_geoip:
+            items = parse_lst_source_geoip(data_str)
+        else:
+            items = parse_lst_source_geosite(data_str)
+        # Для .lst нет категорий — сохраняем в один файл с именем "all"
+        write_lst_file(target_folder, "all", items, is_geoip)
+
+    else:
+        process_dat(data_bytes, is_geoip, target_folder)
 
 def parse_geogaga_dat(filepath, is_geoip):
     with open(filepath, 'rb') as f:
