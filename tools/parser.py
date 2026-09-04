@@ -52,7 +52,7 @@ def write_lst_file(folder, category, items, is_geoip):
         print(f"  ⚠️ Категория {category} пуста, файл не создан.")
         return
     safe_name = "".join(c if c.isalnum() or c in ('-', '_') else '_' for c in category.upper())
-    filename = f"{safe_name}.lst"
+    filename = f"{safe_name}.LST"
     filepath = os.path.join(folder, filename)
 
     lines = []
@@ -202,7 +202,6 @@ def process_source(source, is_geoip):
             items = parse_lst_source_geoip(data_str)
         else:
             items = parse_lst_source_geosite(data_str)
-        # Для .lst нет категорий — сохраняем в один файл с именем "all"
         write_lst_file(target_folder, "all", items, is_geoip)
 
     else:
