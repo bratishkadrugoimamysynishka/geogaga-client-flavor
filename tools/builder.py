@@ -51,10 +51,16 @@ def process_dat(config, list_class, attr_name):
         if url_lower.endswith('.json'):
             for rule in source['rules']:
                 src_cats = {c.upper() for c in rule['src']}
-                fetched = parse_json_source_geoip(parsed_data, src_cats) if attr_name == "cidr" else parse_json_source_geosite(parsed_data, src_cats)
-                for item, cat in fetched:
-                    k = get_item_key(item, attr_name)
-                    upstream_keys_map[k].append((source['url'], cat))
+                if attr_name == "cidr":
+                    fetched = parse_json_source_geoip(parsed_data, src_cats)
+                    for item, provider, asn in fetched:   # <--- исправлено: три значения
+                        k = get_item_key(item, attr_name)
+                        upstream_keys_map[k].append((source['url'], provider))
+                else:
+                    fetched = parse_json_source_geosite(parsed_data, src_cats)
+                    for item, cat in fetched:
+                        k = get_item_key(item, attr_name)
+                        upstream_keys_map[k].append((source['url'], cat))
         elif url_lower.endswith('.lst') or url_lower.endswith('.txt'):
             fetched = parse_lst_source_geoip(parsed_data) if attr_name == "cidr" else parse_lst_source_geosite(parsed_data)
             for item in fetched:
