@@ -6,8 +6,8 @@
 
 Вы всегда можете скачать самые свежие, автоматически скомпилированные бинарные базы данных напрямую по ссылкам:
 
-* 🌐 **Geosite (`geosite.dat`)** — [Скачать](https://raw.githack.com/bratishkadrugoimamysynishka/geogaga-client-flavor/release/geosite.dat)
-* 🗺️ **Geoip (`geoip.dat`)** — [Скачать](https://raw.githack.com/bratishkadrugoimamysynishka/geogaga-client-flavor/release/geoip.dat)
+* 🌐 **Geosite (`geosite.dat`)** — [Скачать](https://raw.githack.com/bratishkadrugoimamysynishka/geogaga-client-flavor/test/result/geosite.dat)
+* 🗺️ **Geoip (`geoip.dat`)** — [Скачать](https://raw.githack.com/bratishkadrugoimamysynishka/geogaga-client-flavor/test/result/geoip.dat)
 
 ---
 
