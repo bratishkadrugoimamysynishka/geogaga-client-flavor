@@ -86,7 +86,6 @@ def process_dat(config, list_class, attr_name):
 
         if url_lower.endswith('.json'):
             if attr_name == "cidr":
-                # Обработка geoip с новой фильтрацией (только CIDR и ASN)
                 for rule in source['rules']:
                     src_cats = {c.upper() for c in rule['src']}
                     dst_cat = rule['dst'].upper()
@@ -102,7 +101,6 @@ def process_dat(config, list_class, attr_name):
                     if is_custom:
                         check_and_log_duplicates(filtered_items, url, attr_name, upstream_keys_map)
             else:
-                # geosite (домены)
                 for rule in source['rules']:
                     src_cats = {c.upper() for c in rule['src']}
                     dst_cat = rule['dst'].upper()
