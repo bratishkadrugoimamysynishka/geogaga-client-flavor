@@ -102,7 +102,10 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
           mkdir -p result
-          mv geosite.dat geosite.dat.sha256 geoip.dat geoip.dat.sha256 routing result/ || true
+          # Удаляем старую папку routing, чтобы избежать ошибки "Directory not empty"
+          rm -rf result/routing
+          cp -r routing result/
+          mv geosite.dat geosite.dat.sha256 geoip.dat geoip.dat.sha256 result/ || true
           
           git add result/
           [ -f tools/review.log ] && git add tools/review.log || true
