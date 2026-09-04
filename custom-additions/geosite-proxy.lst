@@ -1,8 +1,17 @@
 # Riot Games - медиа/патчноуты
 full:rgpub.io
 
-# CachyOS - сервер с пакетами
+# CachyOS - скачивание/обновление пакетов
 full:archlinux.cachyos.org
 
-# Steam - медиа
-domain:akamai.steamstatic.com
+# Steam - CDN
+domain:steamstatic.com
+
+# Google Play - скачивание/обновление приложений
+domain:xn--ngstr-lra8j.com
+
+# Airbnb - CDN
+domain:muscache.com
+
+# Comss - сайт и сервисы
+domain:comss.ru
