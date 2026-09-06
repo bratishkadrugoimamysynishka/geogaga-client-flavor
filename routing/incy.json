@@ -1,0 +1,37 @@
+{
+  "Name": "GeoGaga - Client Flavor",
+  "GlobalProxy": "false",
+  "RouteOrder": "block-direct-proxy",
+  "RemoteDNSType": "DoH",
+  "RemoteDNSDomain": "https://cloudflare-dns.com/dns-query",
+  "RemoteDNSIP": "1.1.1.1",
+  "DomesticDNSType": "TCP",
+  "DomesticDNSDomain": "",
+  "DomesticDNSIP": "77.88.8.8",
+  "Geoipurl": "https://raw.githack.com/bratishkadrugoimamysynishka/geogaga-client-flavor/release/geoip.dat",
+  "Geositeurl": "https://raw.githack.com/bratishkadrugoimamysynishka/geogaga-client-flavor/release/geosite.dat",
+  "LastUpdated": "1788725844",
+  "DnsHosts": {
+    "cloudflare-dns.com": "1.1.1.1",
+    "ntc.party": "130.255.77.28"
+  },
+  "DirectSites": [
+    "geosite:geogaga-direct"
+  ],
+  "DirectIp": [
+    "geoip:geogaga-direct"
+  ],
+  "ProxySites": [
+    "geosite:geogaga-proxy"
+  ],
+  "ProxyIp": [
+    "geoip:geogaga-proxy"
+  ],
+  "BlockSites": [
+    "geosite:geogaga-block"
+  ],
+  "BlockIp": [],
+  "DomainStrategy": "IPIfNonMatch",
+  "FakeDNS": "true",
+  "UseChunkFiles": "true"
+}
