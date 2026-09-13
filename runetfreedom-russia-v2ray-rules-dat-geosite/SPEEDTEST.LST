@@ -1,0 +1,14 @@
+full:www.speedtest.net.cdn.cloudflare.net
+domain:cdnst.net
+domain:cellmaps.com
+domain:ekahau.cloud
+domain:ekahau.com
+domain:ookla.com
+domain:ooklaserver.net
+domain:pingtest.net
+domain:speedtest.co
+domain:speedtest.net
+domain:speedtestcustom.com
+domain:webtest.net
+domain:ookla-speedtest-central.hgconair.hgc.com.hk
+regex:^speed\.(coe|open)\.ad\.[a-z]{2,6}\.prod\.hosts\.ooklaserver\.net$
