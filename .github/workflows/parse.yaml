@@ -13,10 +13,15 @@ permissions:
 jobs:
   parse-data:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    env:
+      TARGET_BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
     steps:
       - name: Клонирование репозитория
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
 
       - name: Настройка Python
         uses: actions/setup-python@v5
@@ -36,15 +41,17 @@ jobs:
 
       - name: Запуск скрипта парсера
         run: python tools/parser.py
+        env:
+          GITHUB_REF_NAME: ${{ env.TARGET_BRANCH }}
 
       - name: Подготовка папки result/lists для test
-        if: github.ref_name == 'test'
+        if: env.TARGET_BRANCH == 'test'
         run: |
           mkdir -p result/lists
           cp -r parser-tmp/* result/lists/
 
       - name: Деплой для ветки main в ветку lists (чистый деплой)
-        if: github.ref_name == 'main'
+        if: env.TARGET_BRANCH == 'main'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: lists
@@ -53,11 +60,11 @@ jobs:
           single-commit: true
 
       - name: Деплой для ветки test в result/lists (внутри test)
-        if: github.ref_name == 'test'
+        if: env.TARGET_BRANCH == 'test'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           git add result/lists/
           git commit -m "chore: обновление списков (test) [skip ci]" || echo "Нет изменений для коммита"
           git push origin test
