@@ -5,13 +5,13 @@ full:rgpub.io
 full:archlinux.cachyos.org
 
 # Steam
-domain:steamstatic.com
+#domain:steamstatic.com
 
 # Google Play
 domain:xn--ngstr-lra8j.com
 
 # Airbnb
-domain:airbnb.ru
+#domain:airbnb.ru
 domain:muscache.com
 
 # Comss.ru / сервисы Comss
