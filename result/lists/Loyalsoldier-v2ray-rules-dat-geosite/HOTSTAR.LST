@@ -1,0 +1,6 @@
+domain:hotstar.com
+domain:hotstar-cdn.net
+domain:hotstar-labs.com
+domain:hotstarext.com
+domain:hsprepack.akamaized.net
+regex:^hses[1-7]?\.akamaized\.net$
