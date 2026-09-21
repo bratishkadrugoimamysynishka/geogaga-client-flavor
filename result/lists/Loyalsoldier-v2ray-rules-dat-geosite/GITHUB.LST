@@ -55,10 +55,10 @@ domain:octocaptcha.com
 domain:opensource.guide
 domain:repo.new
 domain:thegithubshop.com
-domain:githubcopilot.com
 domain:npm.community
 domain:npmjs.com
 domain:npmjs.org
+domain:githubcopilot.com
 domain:collector.github.com
 full:copilot-telemetry-service.githubusercontent.com
 full:copilot-telemetry.githubusercontent.com

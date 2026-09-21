@@ -1,5 +1,5 @@
-domain:viju.ru
-domain:restream-media.net
+domain:cdnvideo.ru
+domain:cdnvideohub.com
 domain:kinescopecdn.net
 domain:trbcdn.net
 domain:kinorium.com
@@ -12,11 +12,15 @@ domain:premier.one
 domain:smotreshka.tv
 domain:start.ru
 domain:tvigle.ru
-domain:cdnvideohub.com
-domain:cdnvideo.ru
-domain:more.tv
-domain:restream.ru
+domain:viju.ru
 domain:promodj.com
+domain:okkoapi.tv
+domain:playfamily.ru
+domain:okko.sport
+domain:okko.tv
+domain:restream-media.net
+domain:restream.ru
+domain:more.tv
 domain:wink.am
 domain:wink.ru
 domain:rutube.ru
@@ -24,8 +28,4 @@ domain:rutubelist.ru
 domain:rtbcdn.ru
 domain:rutube.sport
 domain:kinopoisk.ru
-domain:okko.tv
-domain:okkoapi.tv
-domain:playfamily.ru
-domain:okko.sport
 domain:kinopoisk-ru.clstorage.net
