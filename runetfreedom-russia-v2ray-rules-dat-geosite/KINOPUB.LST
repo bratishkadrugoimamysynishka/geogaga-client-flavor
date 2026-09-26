@@ -1,0 +1,17 @@
+domain:cdn2cdn.com
+domain:support-kp.com
+domain:kinopub.online
+domain:kpdl.link
+domain:smarttvcdn.online
+domain:gfw.ovh
+domain:kino.watch
+domain:tsx.ovh
+domain:ahc.ovh
+domain:pushbr.com
+domain:mos-gorsud.co
+domain:cdn-service.space
+domain:kino.pub
+domain:cdn2site.com
+domain:m.alador.space
+domain:api.alador.space
+regex:(\w+)-static-[0-9]+\.cdntogo\.net$
