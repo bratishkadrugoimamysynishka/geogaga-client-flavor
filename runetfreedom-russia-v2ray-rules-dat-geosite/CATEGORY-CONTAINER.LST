@@ -1,0 +1,10 @@
+domain:azurecr.io
+domain:docker.io
+domain:ecr.aws
+domain:gcr.io
+domain:ghcr.io
+domain:quay.io
+domain:mcr.microsoft.com
+domain:registry.gitlab.com
+domain:registry.k8s.io
+regex:.+\.dkr\.ecr\.[^\.]+\.amazonaws\.com$
