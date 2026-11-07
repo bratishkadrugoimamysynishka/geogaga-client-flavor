@@ -1,0 +1,17 @@
+domain:mhystatic.com
+domain:mhyurl.cn
+domain:mihayo.com
+domain:mihayou.com
+domain:mihoyo.com
+domain:mihoyocg.com
+domain:mihoyogift.com
+domain:mihoyomall.com
+domain:miyoushe.com
+domain:benghuai.com
+domain:bh3.com
+domain:bhsr.com
+domain:themisweeps.com
+domain:yuanshen.com
+domain:juequling.com
+regex:^.+-mihayo\.akamaized\.net$
+domain:log-upload.mihoyo.com

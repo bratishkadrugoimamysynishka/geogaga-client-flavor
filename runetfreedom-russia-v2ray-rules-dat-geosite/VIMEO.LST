@@ -1,0 +1,17 @@
+domain:vhx.tv
+domain:vhxqa1.com
+domain:vhxqa2.com
+domain:vhxqa3.com
+domain:vhxqa4.com
+domain:vhxqa6.com
+domain:vimeo-staging.com
+domain:vimeo-staging2.com
+domain:vimeo.com
+domain:vimeo.fr
+domain:vimeobusiness.com
+domain:vimeocdn.com
+domain:vimeogoods.com
+domain:vimeoondemand.com
+domain:vimeostatus.com
+domain:livestream.com
+regex:^[0-9]+vod-adaptive\.akamaized\.net$
