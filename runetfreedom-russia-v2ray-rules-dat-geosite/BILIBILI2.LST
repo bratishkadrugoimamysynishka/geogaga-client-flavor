@@ -1,0 +1,4 @@
+domain:bili2.cc
+domain:bili888.com
+domain:bili999.com
+regex:(^|\.)bilibili3(0[1-9]|1[0-2])\.xyz$
